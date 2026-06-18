@@ -17,6 +17,12 @@ tasks:
     cmds:
       - go run ./cmd/server/
 
+  start:
+    desc: Build and run the compiled server binary
+    deps: [build]
+    cmds:
+      - ./bin/server
+
   clean:
     desc: Remove build artifacts
     cmds:
