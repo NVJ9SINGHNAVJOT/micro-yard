@@ -41,27 +41,34 @@ Copy `.env.example` to `.env` and set the values:
 
 ## Available Tasks
 
-| Command      | Description                          |
-| ------------ | ------------------------------------ |
-| `task run`   | Run the server                       |
-| `task build` | Build binary to `bin/server`         |
-| `task check` | Format, vet, and build               |
-| `task fmt`   | Format all Go source files           |
-| `task vet`   | Run `go vet` across all packages     |
-| `task tidy`  | Tidy `go.mod`                        |
-| `task clean` | Remove build artifacts               |
+| Command          | Description                                               |
+| ---------------- | --------------------------------------------------------- |
+| `task run`       | Run the API server                                        |
+| `task web`       | Run the web dashboard (requires the API server running)   |
+| `task start`     | Build and run the compiled API server binary              |
+| `task start-web` | Build and run the compiled web dashboard binary           |
+| `task build`     | Build server and dashboard binaries to `bin/`             |
+| `task build-web` | Build only the dashboard binary to `bin/`                 |
+| `task check`     | Format, vet, and build (run before committing)            |
+| `task fmt`       | Format all Go source files                                |
+| `task vet`       | Run `go vet` across all packages                          |
+| `task tidy`      | Tidy `go.mod`                                             |
+| `task clean`     | Remove build artifacts                                    |
 
 ## Project Structure
 
 ```text
 storage-service/
-├── cmd/server/          # Entry point — wires routes and starts the server
+├── cmd/
+│   ├── server/          # API server entry point
+│   └── web/             # Web dashboard entry point (reverse proxy + embedded UI)
 ├── internal/
-│   ├── api/             # HTTP handlers
+│   ├── api/             # HTTP handlers (paginated list, metadata, download, delete)
 │   ├── models/          # Media struct
 │   └── storage/         # Filesystem and metadata logic
 ├── pkg/                 # Shared utilities (UUID generation, .env loader)
-├── helper/              # Shared response helpers (JSON/error writers)
+├── helper/              # Response helpers (JSON, paginated JSON, error writers)
+├── web/                 # Dashboard frontend (HTML, CSS, JS — embedded at build time)
 ├── storage/             # Uploaded files (gitignored, created at startup)
 │   ├── images/
 │   ├── videos/
@@ -87,17 +94,30 @@ storage/
 
 If an upload fails midway, the partial directory is automatically cleaned up.
 
+## Web Dashboard
+
+The built-in web dashboard runs on port `9001` and proxies API calls to the server on port `9000`.
+
+**Features:**
+
+- **Infinite scroll** — loads 50 files at a time; scrolling near the bottom automatically fetches the next batch.
+- **3 view modes** — switch between compact, default, and large card layouts via the view toggle in the toolbar. Preference is saved in `localStorage`.
+- **Category filtering** — browse by All Files, Images, Videos, Audio, Documents, or Others.
+- **Sort controls** — sort by date or file size, ascending or descending.
+- **Lightbox** — click the view button on image/video cards to preview in a full-screen modal.
+- **Bulk delete** — delete all files in a category with a single action.
+
 ## API
 
 See [API.md](API.md) for the full endpoint reference.
 
 ### Quick reference
 
-| Method   | Path                    | Description            |
-| -------- | ----------------------- | ---------------------- |
-| `GET`    | `/health`               | Health check           |
-| `POST`   | `/api/media/upload`     | Upload a file          |
-| `GET`    | `/api/media`            | List all files         |
-| `GET`    | `/api/media/{id}`       | Get file metadata      |
-| `GET`    | `/api/media/{id}/file`  | Download the file      |
-| `DELETE` | `/api/media/{id}`       | Delete a file          |
+| Method   | Path                    | Description                                      |
+| -------- | ----------------------- | ------------------------------------------------ |
+| `GET`    | `/health`               | Health check                                     |
+| `POST`   | `/api/media/upload`     | Upload a file                                    |
+| `GET`    | `/api/media`            | List files (paginated — `limit`, `offset`)       |
+| `GET`    | `/api/media/{id}`       | Get file metadata                                |
+| `GET`    | `/api/media/{id}/file`  | Download the file                                |
+| `DELETE` | `/api/media/{id}`       | Delete a file                                    |

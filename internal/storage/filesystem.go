@@ -143,9 +143,21 @@ func (fs *FileSystem) Delete(id string) error {
 }
 
 func (fs *FileSystem) List() ([]*models.Media, error) {
+	return fs.ListFiltered("")
+}
+
+func (fs *FileSystem) ListFiltered(category string) ([]*models.Media, error) {
 	var results []*models.Media
 
-	err := filepath.WalkDir(fs.root, func(path string, d os.DirEntry, err error) error {
+	root := fs.root
+	if category != "" {
+		root = filepath.Join(fs.root, category)
+		if _, err := os.Stat(root); err != nil {
+			return results, nil
+		}
+	}
+
+	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

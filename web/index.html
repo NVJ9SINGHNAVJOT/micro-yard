@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Storage Vault</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar__brand">
+        <div class="topbar__logo">
+          <svg
+            width="100%"
+            height="100%"
+            viewBox="0 0 40 40"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <defs>
+              <linearGradient
+                id="logo-grad"
+                x1="0%"
+                y1="0%"
+                x2="100%"
+                y2="100%"
+              >
+                <stop offset="0%" stop-color="#8B5CF6" />
+                <stop offset="100%" stop-color="#06B6D4" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M20 5L35 12.5V27.5L20 35L5 27.5V12.5L20 5Z"
+              stroke="url(#logo-grad)"
+              stroke-width="2.5"
+              fill="none"
+            />
+            <path
+              d="M20 12V28"
+              stroke="url(#logo-grad)"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            />
+            <path
+              d="M12 20H28"
+              stroke="url(#logo-grad)"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            />
+          </svg>
+        </div>
+        <h1 class="topbar__title gradient-text">Storage Vault</h1>
+      </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar__header">
+        <h2 class="sidebar__title">Storage Vault</h2>
+      </div>
+      <nav class="sidebar__nav" id="sidebar-nav">
+        <button class="nav-link active" data-category="">
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            width="20"
+            height="20"
+            aria-hidden="true"
+          >
+            <path
+              d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"
+            />
+          </svg>
+          All Files
+        </button>
+        <button class="nav-link" data-category="images">
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            width="20"
+            height="20"
+            aria-hidden="true"
+          >
+            <path
+              d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"
+            />
+          </svg>
+          Images
+        </button>
+        <button class="nav-link" data-category="videos">
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            width="20"
+            height="20"
+            aria-hidden="true"
+          >
+            <path
+              d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"
+            />
+          </svg>
+          Videos
+        </button>
+        <button class="nav-link" data-category="audio">
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            width="20"
+            height="20"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"
+            />
+          </svg>
+          Audio
+        </button>
+        <button class="nav-link" data-category="documents">
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            width="20"
+            height="20"
+            aria-hidden="true"
+          >
+            <path
+              d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"
+            />
+          </svg>
+          Documents
+        </button>
+        <button class="nav-link" data-category="others">
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            width="20"
+            height="20"
+            aria-hidden="true"
+          >
+            <path
+              d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"
+            />
+          </svg>
+          Others
+        </button>
+      </nav>
+      <div class="sidebar__footer">
+        <div class="storage-meter glass">
+          <div class="storage-meter__header" style="margin-bottom: 0">
+            <span>Storage Used</span>
+          </div>
+          <div
+            class="storage-meter__detail"
+            id="storage-detail"
+            style="
+              margin-top: 4px;
+              font-size: 14px;
+              opacity: 1;
+              font-weight: 600;
+              color: var(--text-primary);
+            "
+          >
+            Calculating...
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Mobile Nav -->
+    <nav class="mobile-nav" id="mobile-nav">
+      <button class="mobile-nav__item active" data-category="">
+        <svg
+          class="icon"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          width="20"
+          height="20"
+          aria-hidden="true"
+        >
+          <path
+            d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"
+          />
+        </svg>
+        <span>All</span>
+      </button>
+      <button class="mobile-nav__item" data-category="images">
+        <svg
+          class="icon"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          width="20"
+          height="20"
+          aria-hidden="true"
+        >
+          <path
+            d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"
+          />
+        </svg>
+        <span>Images</span>
+      </button>
+      <button class="mobile-nav__item" data-category="videos">
+        <svg
+          class="icon"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          width="20"
+          height="20"
+          aria-hidden="true"
+        >
+          <path
+            d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"
+          />
+        </svg>
+        <span>Videos</span>
+      </button>
+      <button class="mobile-nav__item" data-category="audio">
+        <svg
+          class="icon"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          width="20"
+          height="20"
+          aria-hidden="true"
+        >
+          <path
+            d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"
+          />
+        </svg>
+        <span>Audio</span>
+      </button>
+      <button class="mobile-nav__item" data-category="documents">
+        <svg
+          class="icon"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          width="20"
+          height="20"
+          aria-hidden="true"
+        >
+          <path
+            d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"
+          />
+        </svg>
+        <span>Docs</span>
+      </button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+      <div class="content-header">
+        <div>
+          <h2 class="content-header__title text-on-surface" id="page-title">
+            All Files
+          </h2>
+          <p class="content-header__subtitle" id="page-subtitle">
+            Manage your cloud vault
+          </p>
+        </div>
+        <div class="content-header__actions">
+          <button
+            class="btn-glass btn-glass--danger"
+            id="btn-delete-all"
+            style="display: none"
+          >
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              width="20"
+              height="20"
+              aria-hidden="true"
+            >
+              <path
+                d="M15 16h4v2h-4zm0-8h7v2h-7zm0 4h6v2h-6zM3 18c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V8H3v10zM14 5h-3l-1-1H6L5 5H2v2h12z"
+              />
+            </svg>
+            Delete All
+          </button>
+          <div class="view-switcher" id="view-switcher">
+            <button
+              class="view-switcher__btn"
+              data-view="compact"
+              title="Compact view"
+            >
+              <svg
+                class="icon"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                width="20"
+                height="20"
+                aria-hidden="true"
+              >
+                <path
+                  d="M20 13H3c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h17c.55 0 1-.45 1-1v-6c0-.55-.45-1-1-1zm0-10H3c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h17c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1z"
+                />
+              </svg>
+            </button>
+            <button
+              class="view-switcher__btn active"
+              data-view="default"
+              title="Default view"
+            >
+              <svg
+                class="icon"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                width="20"
+                height="20"
+                aria-hidden="true"
+              >
+                <path
+                  d="M4 11h5V5H4v6zm0 7h5v-6H4v6zm6 0h5v-6h-5v6zm6 0h5v-6h-5v6zm-6-7h5V5h-5v6zm6-6v6h5V5h-5z"
+                />
+              </svg>
+            </button>
+            <button
+              class="view-switcher__btn"
+              data-view="large"
+              title="Large view"
+            >
+              <svg
+                class="icon"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                width="20"
+                height="20"
+                aria-hidden="true"
+              >
+                <path
+                  d="M3 3v8h8V3H3zm6 6H5V5h4v4zm-6 4v8h8v-8H3zm6 6H5v-4h4v4zm4-16v8h8V3h-8zm6 6h-4V5h4v4zm-6 4v8h8v-8h-8zm6 6h-4v-4h4v4z"
+                />
+              </svg>
+            </button>
+          </div>
+          <div class="sort-dropdown">
+            <button class="btn-glass" id="btn-sort">
+              <svg
+                class="icon"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                width="20"
+                height="20"
+                aria-hidden="true"
+              >
+                <path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z" />
+              </svg>
+              <span id="sort-label">Sort by Date</span>
+            </button>
+            <div class="sort-dropdown__menu" id="sort-menu">
+              <button
+                class="sort-dropdown__item active"
+                data-sort="created_at"
+                data-order="desc"
+              >
+                Newest First
+              </button>
+              <button
+                class="sort-dropdown__item"
+                data-sort="created_at"
+                data-order="asc"
+              >
+                Oldest First
+              </button>
+              <button
+                class="sort-dropdown__item"
+                data-sort="size"
+                data-order="desc"
+              >
+                Largest First
+              </button>
+              <button
+                class="sort-dropdown__item"
+                data-sort="size"
+                data-order="asc"
+              >
+                Smallest First
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="file-grid" id="grid" data-view="default">
+        <!-- File cards rendered here -->
+      </div>
+      <div class="scroll-loader" id="scroll-loader" style="display: none">
+        <div class="spinner"></div>
+      </div>
+    </main>
+
+    <!-- Lightbox Modal -->
+    <div class="modal-overlay" id="lightbox-modal">
+      <button
+        class="modal-close"
+        onclick="closeModal('lightbox-modal')"
+        aria-label="Close"
+      >
+        <svg
+          class="icon"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          width="20"
+          height="20"
+          aria-hidden="true"
+        >
+          <path
+            d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+          />
+        </svg>
+      </button>
+      <div class="lightbox-layout">
+        <div
+          class="lightbox__image-wrap glass glow-border"
+          id="lightbox-media-container"
+        >
+          <!-- Media (img or video) injected here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirm Modal -->
+    <div class="modal-overlay" id="delete-modal">
+      <div class="confirm-modal glass glow-border">
+        <div class="confirm-modal__icon">
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            width="20"
+            height="20"
+            aria-hidden="true"
+          >
+            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+          </svg>
+        </div>
+        <h2>Confirm Deletion</h2>
+        <p id="delete-modal-text">
+          Are you sure you want to delete this item? This action cannot be
+          undone.
+        </p>
+        <div class="confirm-modal__actions">
+          <button class="btn-cancel" onclick="closeModal('delete-modal')">
+            Cancel
+          </button>
+          <button class="btn-delete" id="confirm-delete-btn">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

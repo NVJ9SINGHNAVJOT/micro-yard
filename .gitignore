@@ -9,5 +9,5 @@ bin/
 # Environment variables file
 .env
 
-# Postman collection files
-*.postman_collection.json
+# Temporary files
+tmp/

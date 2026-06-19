@@ -74,49 +74,21 @@ Response `200`:
 
 ---
 
-### POST /api/media/upload
-
-Upload a file. MIME type is detected from file content, not the filename extension.
-
-Request — `multipart/form-data`:
-
-| Field  | Type   | Required | Description        |
-| ------ | ------ | -------- | ------------------ |
-| `file` | binary | yes      | The file to upload |
-
-Response `201` — full Media object:
-
-```json
-{
-  "data": {
-    "id": "a1b2c3d4-e5f6-4789-a012-b3c4d5e6f789",
-    "filename": "photo.jpg",
-    "originalFilename": "photo.jpg",
-    "mimeType": "image/jpeg",
-    "size": 2456789,
-    "category": "images",
-    "createdAt": "2026-06-14T12:00:00Z"
-  }
-}
-```
-
-Response `400` — multipart form is malformed or `file` field is missing:
-
-```json
-{ "error": { "message": "missing file field" } }
-```
-
-Response `500` — disk write or directory creation failed:
-
-```json
-{ "error": { "message": "failed to save file" } }
-```
-
----
-
 ### GET /api/media
 
-List metadata for all uploaded files. Returns an empty array when no files exist.
+List metadata for stored files. Supports filtering, sorting, and pagination via query parameters. Returns an empty array when no files match.
+
+#### Query Parameters
+
+| Parameter | Type   | Default      | Description |
+| --------- | ------ | ------------ | ----------- |
+| `category`| string | _(empty)_    | Filter by category: `images`, `videos`, `audio`, `documents`, `others` |
+| `sort_by` | string | `created_at` | Sort field: `size`, `created_at` |
+| `order`   | string | `desc`       | Sort order: `asc`, `desc` |
+| `limit`   | int    | `50`         | Max items per page (clamped 1–100) |
+| `offset`  | int    | `0`          | Number of items to skip |
+
+Example Request: `GET /api/media?category=images&sort_by=size&order=desc&limit=50&offset=0`
 
 Response `200`:
 
@@ -132,7 +104,13 @@ Response `200`:
       "category": "images",
       "createdAt": "2026-06-14T12:00:00Z"
     }
-  ]
+  ],
+  "pagination": {
+    "total": 237,
+    "limit": 50,
+    "offset": 0,
+    "hasMore": true
+  }
 }
 ```
 
@@ -220,9 +198,7 @@ Response `404` — no file exists with that ID:
 
 A typical client flow:
 
-1. `POST /api/media/upload` with a `multipart/form-data` body containing the `file` field.
-2. Read `data.id` from the `201` response — this is the permanent identifier for the file.
-3. Use `GET /api/media/{id}` to retrieve metadata at any time.
-4. Use `GET /api/media/{id}/file` to stream or download the original file.
-5. Use `DELETE /api/media/{id}` to remove the file when no longer needed.
-6. Use `GET /api/media` to list all stored files.
+1. Use `GET /api/media?category=images&sort_by=created_at&order=desc` to list and filter stored files.
+2. Use `GET /api/media/{id}` to retrieve metadata for a specific file.
+3. Use `GET /api/media/{id}/file` to stream or download the original file.
+4. Use `DELETE /api/media/{id}` to remove the file when no longer needed.

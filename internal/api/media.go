@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"slices"
+	"strconv"
 
 	"github.com/navjot/storage-service/helper"
 	"github.com/navjot/storage-service/internal/models"
@@ -11,8 +13,51 @@ import (
 )
 
 func List(fs *storage.FileSystem) http.HandlerFunc {
+	validCategories := map[string]bool{
+		"images": true, "videos": true, "audio": true,
+		"documents": true, "others": true,
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
-		media, err := fs.List()
+		q := r.URL.Query()
+
+		category := q.Get("category")
+		if category != "" && !validCategories[category] {
+			category = ""
+		}
+
+		sortBy := q.Get("sort_by")
+		if sortBy != "size" && sortBy != "created_at" {
+			sortBy = "created_at"
+		}
+
+		order := q.Get("order")
+		if order != "asc" && order != "desc" {
+			order = "desc"
+		}
+
+		// Pagination defaults
+		limit := 50
+		if v := q.Get("limit"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil {
+				limit = n
+			}
+		}
+		if limit < 1 {
+			limit = 1
+		}
+		if limit > 100 {
+			limit = 100
+		}
+
+		offset := 0
+		if v := q.Get("offset"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+				offset = n
+			}
+		}
+
+		media, err := fs.ListFiltered(category)
 		if err != nil {
 			slog.Error("failed to list media", "error", err)
 			helper.WriteError(w, http.StatusInternalServerError, "failed to list media")
@@ -21,7 +66,44 @@ func List(fs *storage.FileSystem) http.HandlerFunc {
 		if media == nil {
 			media = []*models.Media{}
 		}
-		helper.WriteJSON(w, http.StatusOK, media)
+
+		slices.SortFunc(media, func(a, b *models.Media) int {
+			var cmp int
+			switch sortBy {
+			case "size":
+				switch {
+				case a.Size < b.Size:
+					cmp = -1
+				case a.Size > b.Size:
+					cmp = 1
+				}
+			default:
+				cmp = a.CreatedAt.Compare(b.CreatedAt)
+			}
+			if order == "desc" {
+				cmp = -cmp
+			}
+			return cmp
+		})
+
+		total := len(media)
+
+		// Apply offset/limit
+		if offset > total {
+			offset = total
+		}
+		end := offset + limit
+		if end > total {
+			end = total
+		}
+		page := media[offset:end]
+
+		helper.WritePaginatedJSON(w, http.StatusOK, page, helper.Pagination{
+			Total:   total,
+			Limit:   limit,
+			Offset:  offset,
+			HasMore: end < total,
+		})
 	}
 }
 
