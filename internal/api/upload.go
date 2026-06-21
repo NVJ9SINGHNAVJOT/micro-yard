@@ -29,6 +29,13 @@ func Upload(fs *storage.FileSystem) http.HandlerFunc {
 			return
 		}
 
+		middleware.LoggerFromContext(r.Context()).Info("file uploaded",
+			"id", m.ID,
+			"filename", m.OriginalFilename,
+			"category", m.Category,
+			"size", m.Size,
+		)
+
 		helper.WriteJSON(w, http.StatusCreated, m)
 	}
 }
