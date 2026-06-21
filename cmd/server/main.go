@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/navjot/storage-service/internal/api"
+	"github.com/navjot/storage-service/internal/middleware"
 	"github.com/navjot/storage-service/internal/storage"
 	"github.com/navjot/storage-service/pkg"
 )
@@ -48,7 +49,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:    ":" + port,
-		Handler: mux,
+		Handler: middleware.Logging(mux),
 	}
 
 	// Listen for SIGINT / SIGTERM in a separate goroutine.

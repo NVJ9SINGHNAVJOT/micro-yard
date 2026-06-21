@@ -1,10 +1,10 @@
 package api
 
 import (
-	"log/slog"
 	"net/http"
 
 	"github.com/navjot/storage-service/helper"
+	"github.com/navjot/storage-service/internal/middleware"
 	"github.com/navjot/storage-service/internal/storage"
 )
 
@@ -24,7 +24,7 @@ func Upload(fs *storage.FileSystem) http.HandlerFunc {
 
 		m, err := fs.Save(file, header)
 		if err != nil {
-			slog.Error("failed to save uploaded file", "filename", header.Filename, "error", err)
+			middleware.LoggerFromContext(r.Context()).Error("failed to save uploaded file", "filename", header.Filename, "error", err)
 			helper.WriteError(w, http.StatusInternalServerError, "failed to save file")
 			return
 		}

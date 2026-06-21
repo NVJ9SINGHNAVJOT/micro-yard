@@ -1,13 +1,13 @@
 package api
 
 import (
-	"log/slog"
 	"net/http"
 	"path/filepath"
 	"slices"
 	"strconv"
 
 	"github.com/navjot/storage-service/helper"
+	"github.com/navjot/storage-service/internal/middleware"
 	"github.com/navjot/storage-service/internal/models"
 	"github.com/navjot/storage-service/internal/storage"
 )
@@ -59,7 +59,7 @@ func List(fs *storage.FileSystem) http.HandlerFunc {
 
 		media, err := fs.ListFiltered(category)
 		if err != nil {
-			slog.Error("failed to list media", "error", err)
+			middleware.LoggerFromContext(r.Context()).Error("failed to list media", "error", err)
 			helper.WriteError(w, http.StatusInternalServerError, "failed to list media")
 			return
 		}
@@ -129,7 +129,7 @@ func Download(fs *storage.FileSystem) http.HandlerFunc {
 		}
 		m, err := fs.Get(id)
 		if err != nil {
-			slog.Error("failed to read metadata for download", "id", id, "error", err)
+			middleware.LoggerFromContext(r.Context()).Error("failed to read metadata for download", "id", id, "error", err)
 			helper.WriteError(w, http.StatusInternalServerError, "failed to read metadata")
 			return
 		}
