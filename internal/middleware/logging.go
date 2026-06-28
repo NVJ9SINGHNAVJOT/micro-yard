@@ -53,7 +53,16 @@ func Logging(next http.Handler) http.Handler {
 			requestID = "unknown"
 		}
 
-		logger := slog.Default().With("request_id", requestID)
+		// The caller (central server) forwards its own id as X-Correlation-ID so one
+		// user action can be traced across services; "unknown" when absent. The
+		// request-scoped logger carries it on every line, while request_id stays local
+		// to this service.
+		correlationID := r.Header.Get("X-Correlation-ID")
+		if correlationID == "" {
+			correlationID = "unknown"
+		}
+
+		logger := slog.Default().With("request_id", requestID, "correlation_id", correlationID)
 		w.Header().Set("X-Request-ID", requestID)
 
 		logger.Info("request received",
