@@ -1,13 +1,16 @@
-# Ignore the following files and directories
-
-# Storage directory for uploaded files
-storage/
-
-# Build output directory
+# General — applies to every service
+.env
+tmp/
 bin/
 
-# Environment variables file
-.env
+# Generated copies of ui-shared/ (single source of truth is ui-shared/; run task sync-shared)
+storage-service/web/shared/
+vitals/ui/shared/
 
-# Temporary files
-tmp/
+# storage-service
+storage-service/storage/
+
+# vitals
+vitals/agent/history/
+vitals/vitalsbar/.build
+vitals/agent/vitals.config.json

@@ -1,5 +1,16 @@
 version: '3'
 
+# Root taskfile: delegates into each service, namespaced.
+#   task storage:run   task vitals:run   task <service>:<task>
+# Run `task` with no args to list everything.
+includes:
+  storage:
+    taskfile: ./storage-service/Taskfile.yml
+    dir: ./storage-service
+  vitals:
+    taskfile: ./vitals/Taskfile.yml
+    dir: ./vitals
+
 tasks:
   default:
     desc: List available tasks
@@ -7,57 +18,14 @@ tasks:
     cmds:
       - task --list
 
-  build:
-    desc: Build server and web dashboard binaries to bin/
+  sync-shared:
+    desc: Sync shared UI assets (ui-shared/) into every service that uses them
     cmds:
-      - go build -o bin/server ./cmd/server/
-      - go build -o bin/dashboard ./cmd/web/
-
-  run:
-    desc: Run the server
-    cmds:
-      - go run ./cmd/server/
-
-  web:
-    desc: Run the web dashboard (requires the API server to be running)
-    cmds:
-      - go run ./cmd/web/
-
-  start:
-    desc: Build and run the compiled server binary
-    deps: [build]
-    cmds:
-      - ./bin/server
-
-  start-web:
-    desc: Build and run the compiled web dashboard binary
-    deps: [build]
-    cmds:
-      - ./bin/dashboard
-
-  clean:
-    desc: Remove build artifacts
-    cmds:
-      - rm -rf bin/
-
-  fmt:
-    desc: Format all Go source files
-    cmds:
-      - gofmt -w .
-
-  vet:
-    desc: Run go vet across all packages
-    cmds:
-      - go vet ./...
-
-  tidy:
-    desc: Tidy go.mod and go.sum
-    cmds:
-      - go mod tidy
+      - task: storage:sync-shared
+      - task: vitals:sync-shared
 
   check:
-    desc: Format, vet, and build (run before committing)
+    desc: Run each service's check (fmt + vet + build)
     cmds:
-      - task: fmt
-      - task: vet
-      - task: build
+      - task: storage:check
+      - task: vitals:check

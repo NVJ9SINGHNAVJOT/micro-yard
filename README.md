@@ -1,123 +1,52 @@
-# Storage Service
+# micro-yard
 
-A lightweight personal file storage service written in Go using only the standard library. Upload files via HTTP, retrieve them by ID, and serve them back — all stored on the local filesystem with metadata tracked in JSON files alongside each upload.
+A small monorepo — a "yard" of self-contained services and tools that run
+locally, no Docker required.
 
-## Tech Stack
+## Services
 
-| Layer       | Technology                                                  |
-| ----------- | ----------------------------------------------------------- |
-| Language    | [Go 1.25](https://go.dev)                                   |
-| HTTP server | `net/http` — stdlib router with Go 1.22+ pattern matching   |
-| Storage     | Local filesystem via `os`, `io`, `path/filepath`            |
-| Metadata    | JSON files via `encoding/json`                              |
-| MIME detect | `http.DetectContentType` (reads first 512 bytes)            |
-| UUID        | `crypto/rand` — no external package                         |
-| Logging     | `log/slog` — structured JSON logs                           |
-| Config      | `.env` file parsed with `bufio` — no external package       |
+| Service                                | What it is                                                                 | Stack                    | Port(s)      |
+| -------------------------------------- | -------------------------------------------------------------------------- | ------------------------ | ------------ |
+| [storage-service](storage-service/)    | Personal HTTP file storage — upload, retrieve, and serve files, with a web dashboard. | Go (stdlib only)         | 9000 / 9001  |
+| [vitals](vitals/)                       | Local dashboard for CPU/RAM/GPU of your machine and watched services, with a macOS menubar app. | Go + gopsutil, JS UI, Swift | 4500         |
 
-> Zero external dependencies. Everything is Go standard library.
+Each service is self-contained: its own `go.mod`, its own `Taskfile.yml`, and its
+own `README.md` + `docs/`. Start with a service's README.
 
-## Requirements
+## Layout
 
-- Go 1.25+
-- [Task](https://taskfile.dev) (optional, for `task` commands)
+```text
+micro-yard/
+├── README.md              # you are here — the service catalog
+├── Taskfile.yml           # root tasks that delegate into each service
+├── docs/                  # cross-service docs only
+│   ├── architecture.md    # how the services relate
+│   └── conventions.md     # the layout + docs rules every service follows
+├── ui-shared/             # shared front-end assets (typography, fonts) for every UI
+├── storage-service/       # ── service
+└── vitals/                # ── service
+```
 
-## Quick Start
+## Getting started
+
+Each service runs independently. From the repo root:
 
 ```bash
-cp .env.example .env   # edit PORT if needed
-task run               # or: go run ./cmd/server/
+task storage:run     # storage API on :9000
+task storage:web     # storage dashboard on :9001
+task vitals:run      # vitals agent + UI on :4500
 ```
 
-The server starts on the port set in `.env` (default `9000`).
+Or `cd` into a service and use its own `Taskfile.yml` directly. Run `task` with no
+arguments to list everything.
 
-## Configuration
+## Conventions
 
-Copy `.env.example` to `.env` and set the values:
+New services follow the layout and docs rules in
+[docs/conventions.md](docs/conventions.md) — a `README.md` front door plus a
+`docs/` folder (`api.md`, `setup.md`, `architecture.md`) so every service reads the
+same way.
 
-| Variable | Default | Description                     |
-| -------- | ------- | ------------------------------- |
-| `PORT`   | `8080`  | Port the HTTP server listens on |
+## License
 
-## Available Tasks
-
-| Command          | Description                                               |
-| ---------------- | --------------------------------------------------------- |
-| `task run`       | Run the API server                                        |
-| `task web`       | Run the web dashboard (requires the API server running)   |
-| `task start`     | Build and run the compiled API server binary              |
-| `task start-web` | Build and run the compiled web dashboard binary           |
-| `task build`     | Build server and dashboard binaries to `bin/`             |
-| `task build-web` | Build only the dashboard binary to `bin/`                 |
-| `task check`     | Format, vet, and build (run before committing)            |
-| `task fmt`       | Format all Go source files                                |
-| `task vet`       | Run `go vet` across all packages                          |
-| `task tidy`      | Tidy `go.mod`                                             |
-| `task clean`     | Remove build artifacts                                    |
-
-## Project Structure
-
-```text
-storage-service/
-├── cmd/
-│   ├── server/          # API server entry point
-│   └── web/             # Web dashboard entry point (reverse proxy + embedded UI)
-├── internal/
-│   ├── api/             # HTTP handlers (paginated list, metadata, download, delete)
-│   ├── models/          # Media struct
-│   └── storage/         # Filesystem and metadata logic
-├── pkg/                 # Shared utilities (UUID generation, .env loader)
-├── helper/              # Response helpers (JSON, paginated JSON, error writers)
-├── web/                 # Dashboard frontend (HTML, CSS, JS — embedded at build time)
-├── storage/             # Uploaded files (gitignored, created at startup)
-│   ├── images/
-│   ├── videos/
-│   ├── audio/
-│   ├── documents/
-│   └── others/
-├── .env.example
-├── API.md               # Full API reference
-└── Taskfile.yml
-```
-
-## Storage Layout
-
-Each uploaded file gets its own directory named by UUID:
-
-```text
-storage/
-└── images/
-    └── a1b2c3d4-e5f6-4789-a012-b3c4d5e6f789/
-        ├── photo.jpg
-        └── meta.json
-```
-
-If an upload fails midway, the partial directory is automatically cleaned up.
-
-## Web Dashboard
-
-The built-in web dashboard runs on port `9001` and proxies API calls to the server on port `9000`.
-
-**Features:**
-
-- **Infinite scroll** — loads 50 files at a time; scrolling near the bottom automatically fetches the next batch.
-- **3 view modes** — switch between compact, default, and large card layouts via the view toggle in the toolbar. Preference is saved in `localStorage`.
-- **Category filtering** — browse by All Files, Images, Videos, Audio, Documents, or Others.
-- **Sort controls** — sort by date or file size, ascending or descending.
-- **Lightbox** — click the view button on image/video cards to preview in a full-screen modal.
-- **Bulk delete** — delete all files in a category with a single action.
-
-## API
-
-See [API.md](API.md) for the full endpoint reference.
-
-### Quick reference
-
-| Method   | Path                    | Description                                      |
-| -------- | ----------------------- | ------------------------------------------------ |
-| `GET`    | `/health`               | Health check                                     |
-| `POST`   | `/api/media/upload`     | Upload a file                                    |
-| `GET`    | `/api/media`            | List files (paginated — `limit`, `offset`)       |
-| `GET`    | `/api/media/{id}`       | Get file metadata                                |
-| `GET`    | `/api/media/{id}/file`  | Download the file                                |
-| `DELETE` | `/api/media/{id}`       | Delete a file                                    |
+[MIT](LICENSE).

@@ -1,0 +1,80 @@
+version: '3'
+
+# The agent runs from ./agent so it resolves vitals.config.json and ../ui correctly.
+tasks:
+  default:
+    desc: List available tasks
+    silent: true
+    cmds:
+      - task --list
+
+  sync-shared:
+    desc: Sync shared UI assets (typography, fonts) from ui-shared/ into ui/shared/
+    cmds:
+      - rm -rf ui/shared
+      - mkdir -p ui/shared/fonts
+      - cp ../ui-shared/typography.css ui/shared/typography.css
+      - cp ../ui-shared/fonts/*.woff2 ui/shared/fonts/
+
+  run:
+    desc: Run the vitals agent (serves the UI + /stats + /history on :4500)
+    deps: [sync-shared]
+    dir: agent
+    cmds:
+      - go run .
+
+  build:
+    desc: Build the agent binary to bin/vitals-agent
+    deps: [sync-shared]
+    dir: agent
+    cmds:
+      - go build -o ../bin/vitals-agent .
+
+  start:
+    desc: Build and run the compiled agent binary
+    deps: [build]
+    dir: agent
+    cmds:
+      - ../bin/vitals-agent
+
+  bar-build:
+    desc: Build the vitalsbar macOS menubar app (release)
+    dir: vitalsbar
+    cmds:
+      - swift build -c release
+
+  bar-start:
+    desc: Build and run the vitalsbar menubar app (needs the agent running on :4500)
+    dir: vitalsbar
+    cmds:
+      - swift run -c release VitalsBar
+
+  tidy:
+    desc: Tidy go.mod and go.sum
+    dir: agent
+    cmds:
+      - go mod tidy
+
+  fmt:
+    desc: Format all Go source files
+    dir: agent
+    cmds:
+      - gofmt -w .
+
+  vet:
+    desc: Run go vet across all packages
+    dir: agent
+    cmds:
+      - go vet ./...
+
+  check:
+    desc: Format, vet, and build (run before committing)
+    cmds:
+      - task: fmt
+      - task: vet
+      - task: build
+
+  clean:
+    desc: Remove build artifacts
+    cmds:
+      - rm -rf bin/

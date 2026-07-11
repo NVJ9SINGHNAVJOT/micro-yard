@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vitals</title>
+  <link rel="stylesheet" href="shared/typography.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Vitals</h1>
+    <span id="status" class="status">connecting…</span>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>System</h2>
+      <div class="system-grid">
+        <div class="gauge-card">
+          <canvas class="gauge" data-metric="cpu" width="140" height="140"></canvas>
+          <span class="gauge-label">CPU</span>
+        </div>
+        <div class="gauge-card">
+          <canvas class="gauge" data-metric="mem" width="140" height="140"></canvas>
+          <span class="gauge-label">RAM</span>
+        </div>
+        <div class="gauge-card">
+          <canvas class="gauge" data-metric="gpu" width="140" height="140"></canvas>
+          <span class="gauge-label">GPU</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Services</h2>
+      <div id="services" class="services-grid"></div>
+    </section>
+
+    <section class="panel">
+      <div class="timeline-head">
+        <h2>Timeline</h2>
+        <div class="controls">
+          <button id="liveBtn" class="live-btn on" title="Follow live and auto-refresh">
+            <span class="dot"></span><span id="liveLabel">Live</span>
+          </button>
+          <label class="ctl">From
+            <input type="datetime-local" id="fromInput" />
+          </label>
+          <label class="ctl">To
+            <input type="datetime-local" id="toInput" />
+          </label>
+          <div class="presets">
+            <button data-range="300">5m</button>
+            <button data-range="900">15m</button>
+            <button data-range="3600">1h</button>
+            <button data-range="21600">6h</button>
+            <button data-range="today">Today</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-block">
+        <div class="chart-title">
+          <span>System</span>
+          <span class="legend">
+            <i style="--c:#58a6ff"></i>CPU
+            <i style="--c:#3fb950"></i>RAM
+            <i style="--c:#bc8cff"></i>GPU
+          </span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="sysChart"></canvas>
+          <div id="sysTip" class="chart-tip"></div>
+        </div>
+      </div>
+
+      <div class="svc-filter-row">
+        <span class="filter-label">Show services</span>
+        <div id="svcFilter" class="svc-filter"></div>
+      </div>
+
+      <div class="chart-block">
+        <div class="chart-title"><span>Services — CPU %</span></div>
+        <div class="chart-wrap">
+          <canvas id="svcCpuChart"></canvas>
+          <div id="svcCpuTip" class="chart-tip"></div>
+        </div>
+      </div>
+
+      <div class="chart-block">
+        <div class="chart-title"><span>Services — RAM (MB)</span></div>
+        <div class="chart-wrap">
+          <canvas id="svcRamChart"></canvas>
+          <div id="svcRamTip" class="chart-tip"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="charts.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
