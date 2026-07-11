@@ -258,37 +258,53 @@ class TimelineChart {
       return;
     }
 
-    // spike lines with a soft vertical-gradient area fill
+    // spike lines with a soft vertical-gradient area fill. A collection gap
+    // (agent stopped, then resumed) leaves a large jump between consecutive
+    // timestamps — split the series at those gaps so we draw a break, not a
+    // straight line bridging the empty period.
     for (const s of this.series) {
       if (!s.points.length) continue;
-      const trace = () => {
-        s.points.forEach((p, i) => {
-          const x = this._xOf(p.ts, area);
-          const y = this._yOf(p.value, area, yMax);
-          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-        });
-      };
+      const thr = this._gapThreshold(s.points);
+      const segs = this._segments(s.points, thr);
 
-      // area fill: series hue fading to transparent toward the baseline
       const fill = ctx.createLinearGradient(0, area.y, 0, area.y + area.h);
       fill.addColorStop(0, this._rgba(s.color, 0.22));
       fill.addColorStop(1, this._rgba(s.color, 0));
-      ctx.beginPath();
-      trace();
-      ctx.lineTo(this._xOf(s.points[s.points.length - 1].ts, area), area.y + area.h);
-      ctx.lineTo(this._xOf(s.points[0].ts, area), area.y + area.h);
-      ctx.closePath();
-      ctx.fillStyle = fill;
-      ctx.fill();
 
-      // 2px line on top
-      ctx.beginPath();
-      trace();
-      ctx.strokeStyle = s.color;
-      ctx.lineWidth = 2;
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
-      ctx.stroke();
+      for (const seg of segs) {
+        // lone sample with no neighbour to connect to → a dot, so it's visible
+        if (seg.length === 1) {
+          ctx.beginPath();
+          ctx.fillStyle = s.color;
+          ctx.arc(this._xOf(seg[0].ts, area), this._yOf(seg[0].value, area, yMax), 2, 0, Math.PI * 2);
+          ctx.fill();
+          continue;
+        }
+        const trace = () =>
+          seg.forEach((p, i) => {
+            const x = this._xOf(p.ts, area);
+            const y = this._yOf(p.value, area, yMax);
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          });
+
+        // area fill, closed down to the baseline under this segment only
+        ctx.beginPath();
+        trace();
+        ctx.lineTo(this._xOf(seg[seg.length - 1].ts, area), area.y + area.h);
+        ctx.lineTo(this._xOf(seg[0].ts, area), area.y + area.h);
+        ctx.closePath();
+        ctx.fillStyle = fill;
+        ctx.fill();
+
+        // 2px line on top
+        ctx.beginPath();
+        trace();
+        ctx.strokeStyle = s.color;
+        ctx.lineWidth = 2;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
     }
 
     // hover scrub: crosshair + surface-ringed dots
@@ -309,6 +325,9 @@ class TimelineChart {
       for (const s of this.series) {
         const p = nearestPoint(s.points, tsAt);
         if (!p) continue;
+        // inside a data gap there's no real sample under the cursor — skip it
+        // rather than snapping the readout to a distant endpoint.
+        if (Math.abs(p.ts - tsAt) > this._gapThreshold(s.points)) continue;
         const cx = this._xOf(p.ts, area);
         const cy = this._yOf(p.value, area, yMax);
         // 2px surface ring so the dot stays legible over any line
@@ -330,6 +349,35 @@ class TimelineChart {
   _rgba(hex, a) {
     const n = parseInt(hex.slice(1), 16);
     return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+
+  // _gapThreshold returns the max time delta (seconds) between two adjacent
+  // samples that still counts as continuous. It adapts to the (possibly
+  // downsampled) sample spacing — 3× the median step — with a 10s floor so
+  // normal 2s live cadence never breaks.
+  _gapThreshold(points) {
+    if (points.length < 3) return Infinity;
+    const dts = [];
+    for (let i = 1; i < points.length; i++) dts.push(points[i].ts - points[i - 1].ts);
+    dts.sort((a, b) => a - b);
+    const med = dts[Math.floor(dts.length / 2)] || 0;
+    return Math.max(med * 3, 10);
+  }
+
+  // _segments splits points into contiguous runs, breaking wherever the step to
+  // the next sample exceeds thr (a collection gap).
+  _segments(points, thr) {
+    const segs = [];
+    let cur = [];
+    for (let i = 0; i < points.length; i++) {
+      if (i > 0 && points[i].ts - points[i - 1].ts > thr) {
+        if (cur.length) segs.push(cur);
+        cur = [];
+      }
+      cur.push(points[i]);
+    }
+    if (cur.length) segs.push(cur);
+    return segs;
   }
 
   _showTooltip(rows, tsAt, area, w) {

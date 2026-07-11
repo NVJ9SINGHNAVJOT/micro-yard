@@ -345,9 +345,16 @@ function setLive(on) {
 
 dom.liveBtn.addEventListener("click", () => setLive(!state.live));
 
+// highlightPreset marks the active range button (or clears all for a custom
+// range, pass null) so the selected window reads at a glance.
+function highlightPreset(range) {
+  $$(".presets button").forEach((b) => b.classList.toggle("active", b.dataset.range === range));
+}
+
 $$(".presets button").forEach((b) => {
   b.addEventListener("click", () => {
     const r = b.dataset.range;
+    highlightPreset(r);
     if (r === "today") {
       const d = new Date();
       d.setHours(0, 0, 0, 0);
@@ -372,6 +379,7 @@ $$(".presets button").forEach((b) => {
 [dom.fromInput, dom.toInput].forEach((el) =>
   el.addEventListener("change", () => {
     if (state.live) setLive(false);
+    highlightPreset(null); // hand-edited range no longer matches a preset
     Timeline.load();
   })
 );
@@ -386,4 +394,5 @@ window.addEventListener("resize", () => {
 
 Poll.tick();
 setInterval(() => Poll.tick(), POLL_MS);
+highlightPreset(String(state.windowSec)); // reflect the default lookback (5m)
 setLive(true); // start the timeline in live mode
