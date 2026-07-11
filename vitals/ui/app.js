@@ -90,6 +90,8 @@ const $$ = (sel) => document.querySelectorAll(sel);
 
 const dom = {
   status: $("status"),
+  statusText: $("statusText"),
+  updated: $("updated"),
   services: $("services"),
   liveBtn: $("liveBtn"),
   liveLabel: $("liveLabel"),
@@ -97,9 +99,11 @@ const dom = {
   toInput: $("toInput"),
   svcFilter: $("svcFilter"),
   gauges: {}, // metric → <canvas>, filled below
+  subs: {}, // metric → stat-card subtitle <span>, filled below
 };
 
 $$(".gauge").forEach((c) => (dom.gauges[c.dataset.metric] = c));
+$$("[data-sub]").forEach((el) => (dom.subs[el.dataset.sub] = el));
 
 // ─── Charts ──────────────────────────────────────────────────────────────────
 
@@ -138,6 +142,28 @@ function svcColor(name) {
   return SVC_COLORS[(i < 0 ? 0 : i) % SVC_COLORS.length];
 }
 
+// loadStatus maps a 0..100 utilization to a status word + CSS class, matching
+// the gauge's own red/amber thresholds (see pickColor in charts.js).
+function loadStatus(pct) {
+  if (pct >= 90) return { word: "Critical", cls: "crit" };
+  if (pct >= 75) return { word: "Elevated", cls: "warn" };
+  return { word: "Nominal", cls: "ok" };
+}
+
+// setSub writes a stat-card subtitle and its status color, if present.
+function setSub(metric, pct) {
+  const el = dom.subs[metric];
+  if (!el) return;
+  if (pct == null) {
+    el.textContent = "Unavailable";
+    el.className = "stat-sub";
+    return;
+  }
+  const s = loadStatus(pct);
+  el.textContent = s.word;
+  el.className = "stat-sub " + s.cls;
+}
+
 // ─── Gauges ──────────────────────────────────────────────────────────────────
 
 const Gauges = {
@@ -146,17 +172,26 @@ const Gauges = {
     const s = snap.system;
     drawGauge(dom.gauges.cpu, s.cpu_total_percent, SYS_COLORS.cpu, Math.round(s.cpu_total_percent) + "%");
     drawGauge(dom.gauges.mem, s.mem_percent, SYS_COLORS.mem, Math.round(s.mem_percent) + "%");
+    setSub("cpu", s.cpu_total_percent);
+    setSub("mem", s.mem_percent);
 
     if (snap.gpu && snap.gpu.available) {
       drawGauge(dom.gauges.gpu, snap.gpu.gpu_util_percent, SYS_COLORS.gpu, Math.round(snap.gpu.gpu_util_percent) + "%");
+      setSub("gpu", snap.gpu.gpu_util_percent);
     } else {
       drawGauge(dom.gauges.gpu, null, SYS_COLORS.gpu, "n/a");
+      setSub("gpu", null);
     }
   },
 
   /** Render one card per service with its live CPU / RAM (or a down state). */
   renderServices(snap) {
-    dom.services.innerHTML = Object.keys(snap.services)
+    const names = Object.keys(snap.services);
+    if (!names.length) {
+      dom.services.innerHTML = `<div class="empty-note">No services configured.</div>`;
+      return;
+    }
+    dom.services.innerHTML = names
       .map((name) => {
         const svc = snap.services[name];
         if (!svc.running) {
@@ -182,12 +217,13 @@ const Poll = {
   async tick() {
     try {
       const snap = await API.stats();
-      dom.status.textContent = "live";
+      dom.statusText.textContent = "Live";
       dom.status.className = "status ok";
+      dom.updated.textContent = "Updated " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       Gauges.renderSystem(snap);
       Gauges.renderServices(snap);
     } catch (err) {
-      dom.status.textContent = "agent unreachable — " + err.message;
+      dom.statusText.textContent = "Disconnected";
       dom.status.className = "status err";
     }
   },

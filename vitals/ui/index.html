@@ -9,41 +9,59 @@
 </head>
 <body>
   <header class="topbar">
-    <h1>Vitals</h1>
-    <span id="status" class="status">connecting…</span>
+    <div class="brand">
+      <div class="brand-mark">V</div>
+      <div class="brand-text">
+        <span class="brand-title">Vitals</span>
+        <span class="brand-sub">System &amp; service monitor</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span id="updated" class="updated"></span>
+      <span id="status" class="status">
+        <span class="status-dot"></span><span id="statusText">connecting…</span>
+      </span>
+    </div>
   </header>
 
   <main>
-    <section class="panel">
-      <h2>System</h2>
-      <div class="system-grid">
-        <div class="gauge-card">
-          <canvas class="gauge" data-metric="cpu" width="140" height="140"></canvas>
-          <span class="gauge-label">CPU</span>
-        </div>
-        <div class="gauge-card">
-          <canvas class="gauge" data-metric="mem" width="140" height="140"></canvas>
-          <span class="gauge-label">RAM</span>
-        </div>
-        <div class="gauge-card">
-          <canvas class="gauge" data-metric="gpu" width="140" height="140"></canvas>
-          <span class="gauge-label">GPU</span>
+    <section class="panel col-system">
+      <div class="panel-header"><h2>System</h2></div>
+      <div class="panel-body">
+        <div class="system-grid">
+          <div class="stat-card">
+            <canvas class="gauge" data-metric="cpu"></canvas>
+            <div class="stat-meta">
+              <span class="stat-label">CPU</span>
+              <span class="stat-sub" data-sub="cpu">—</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <canvas class="gauge" data-metric="mem"></canvas>
+            <div class="stat-meta">
+              <span class="stat-label">RAM</span>
+              <span class="stat-sub" data-sub="mem">—</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <canvas class="gauge" data-metric="gpu"></canvas>
+            <div class="stat-meta">
+              <span class="stat-label">GPU</span>
+              <span class="stat-sub" data-sub="gpu">—</span>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="panel">
-      <h2>Services</h2>
-      <div id="services" class="services-grid"></div>
-    </section>
-
-    <section class="panel">
-      <div class="timeline-head">
+    <section class="panel col-graphs">
+      <div class="panel-header">
         <h2>Timeline</h2>
         <div class="controls">
           <button id="liveBtn" class="live-btn on" title="Follow live and auto-refresh">
             <span class="dot"></span><span id="liveLabel">Live</span>
           </button>
+          <span class="divider"></span>
           <label class="ctl">From
             <input type="datetime-local" id="fromInput" />
           </label>
@@ -60,40 +78,49 @@
         </div>
       </div>
 
-      <div class="chart-block">
-        <div class="chart-title">
-          <span>System</span>
-          <span class="legend">
-            <i style="--c:#58a6ff"></i>CPU
-            <i style="--c:#3fb950"></i>RAM
-            <i style="--c:#bc8cff"></i>GPU
-          </span>
+      <div class="panel-body">
+        <div class="chart-block">
+          <div class="chart-title">
+            <span>System usage</span>
+            <span class="legend">
+              <span style="--c:#58a6ff"><i></i>CPU</span>
+              <span style="--c:#3fb950"><i></i>RAM</span>
+              <span style="--c:#bc8cff"><i></i>GPU</span>
+            </span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="sysChart"></canvas>
+            <div id="sysTip" class="chart-tip"></div>
+          </div>
         </div>
-        <div class="chart-wrap">
-          <canvas id="sysChart"></canvas>
-          <div id="sysTip" class="chart-tip"></div>
+
+        <div class="svc-filter-row">
+          <span class="filter-label">Services</span>
+          <div id="svcFilter" class="svc-filter"></div>
+        </div>
+
+        <div class="chart-block">
+          <div class="chart-title"><span>Services — CPU %</span></div>
+          <div class="chart-wrap">
+            <canvas id="svcCpuChart"></canvas>
+            <div id="svcCpuTip" class="chart-tip"></div>
+          </div>
+        </div>
+
+        <div class="chart-block">
+          <div class="chart-title"><span>Services — RAM (MB)</span></div>
+          <div class="chart-wrap">
+            <canvas id="svcRamChart"></canvas>
+            <div id="svcRamTip" class="chart-tip"></div>
+          </div>
         </div>
       </div>
+    </section>
 
-      <div class="svc-filter-row">
-        <span class="filter-label">Show services</span>
-        <div id="svcFilter" class="svc-filter"></div>
-      </div>
-
-      <div class="chart-block">
-        <div class="chart-title"><span>Services — CPU %</span></div>
-        <div class="chart-wrap">
-          <canvas id="svcCpuChart"></canvas>
-          <div id="svcCpuTip" class="chart-tip"></div>
-        </div>
-      </div>
-
-      <div class="chart-block">
-        <div class="chart-title"><span>Services — RAM (MB)</span></div>
-        <div class="chart-wrap">
-          <canvas id="svcRamChart"></canvas>
-          <div id="svcRamTip" class="chart-tip"></div>
-        </div>
+    <section class="panel col-services">
+      <div class="panel-header"><h2>Services</h2></div>
+      <div class="panel-body">
+        <div id="services" class="services-grid"></div>
       </div>
     </section>
   </main>
