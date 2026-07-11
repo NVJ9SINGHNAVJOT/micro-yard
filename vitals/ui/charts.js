@@ -85,14 +85,15 @@ function drawGauge(canvas, pct, base, label) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   const w = size, h = size;
-  const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 2 - 11;
+  const arc = Math.max(9, Math.round(size * 0.075)); // arc thickness scales with size
+  const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 2 - arc - 2;
   ctx.clearRect(0, 0, w, h);
 
   const start = Math.PI * 0.75;
   const end = Math.PI * 2.25;
   const clamped = Math.max(0, Math.min(100, pct || 0));
 
-  ctx.lineWidth = 9;
+  ctx.lineWidth = arc;
   ctx.lineCap = "round";
 
   // recessive track
@@ -123,7 +124,7 @@ function drawGauge(canvas, pct, base, label) {
   ctx.textBaseline = "middle";
   if (pct == null) {
     ctx.fillStyle = COLORS.faint;
-    ctx.font = `500 15px ${UI_FONT}`;
+    ctx.font = `500 ${Math.round(size * 0.13)}px ${UI_FONT}`;
     ctx.fillText(label, cx, cy);
     return;
   }
@@ -131,8 +132,8 @@ function drawGauge(canvas, pct, base, label) {
   const num = m ? m[1] : label;
   const unit = m && m[2] ? m[2] : "";
   ctx.fillStyle = COLORS.text;
-  const numFont = `700 27px ${UI_FONT}`;
-  const unitFont = `600 13px ${UI_FONT}`;
+  const numFont = `700 ${Math.round(size * 0.24)}px ${UI_FONT}`;
+  const unitFont = `600 ${Math.round(size * 0.115)}px ${UI_FONT}`;
   ctx.font = numFont;
   const numW = ctx.measureText(num).width;
   ctx.font = unitFont;

@@ -99,11 +99,9 @@ const dom = {
   toInput: $("toInput"),
   svcFilter: $("svcFilter"),
   gauges: {}, // metric → <canvas>, filled below
-  subs: {}, // metric → stat-card subtitle <span>, filled below
 };
 
 $$(".gauge").forEach((c) => (dom.gauges[c.dataset.metric] = c));
-$$("[data-sub]").forEach((el) => (dom.subs[el.dataset.sub] = el));
 
 // ─── Charts ──────────────────────────────────────────────────────────────────
 
@@ -142,28 +140,6 @@ function svcColor(name) {
   return SVC_COLORS[(i < 0 ? 0 : i) % SVC_COLORS.length];
 }
 
-// loadStatus maps a 0..100 utilization to a status word + CSS class, matching
-// the gauge's own red/amber thresholds (see pickColor in charts.js).
-function loadStatus(pct) {
-  if (pct >= 90) return { word: "Critical", cls: "crit" };
-  if (pct >= 75) return { word: "Elevated", cls: "warn" };
-  return { word: "Nominal", cls: "ok" };
-}
-
-// setSub writes a stat-card subtitle and its status color, if present.
-function setSub(metric, pct) {
-  const el = dom.subs[metric];
-  if (!el) return;
-  if (pct == null) {
-    el.textContent = "Unavailable";
-    el.className = "stat-sub";
-    return;
-  }
-  const s = loadStatus(pct);
-  el.textContent = s.word;
-  el.className = "stat-sub " + s.cls;
-}
-
 // ─── Gauges ──────────────────────────────────────────────────────────────────
 
 const Gauges = {
@@ -172,15 +148,11 @@ const Gauges = {
     const s = snap.system;
     drawGauge(dom.gauges.cpu, s.cpu_total_percent, SYS_COLORS.cpu, Math.round(s.cpu_total_percent) + "%");
     drawGauge(dom.gauges.mem, s.mem_percent, SYS_COLORS.mem, Math.round(s.mem_percent) + "%");
-    setSub("cpu", s.cpu_total_percent);
-    setSub("mem", s.mem_percent);
 
     if (snap.gpu && snap.gpu.available) {
       drawGauge(dom.gauges.gpu, snap.gpu.gpu_util_percent, SYS_COLORS.gpu, Math.round(snap.gpu.gpu_util_percent) + "%");
-      setSub("gpu", snap.gpu.gpu_util_percent);
     } else {
       drawGauge(dom.gauges.gpu, null, SYS_COLORS.gpu, "n/a");
-      setSub("gpu", null);
     }
   },
 
