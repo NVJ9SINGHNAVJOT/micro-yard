@@ -67,11 +67,16 @@ func main() {
 
 	// latest holds the most recent snapshot, refreshed by the background poller
 	// so HTTP handlers never block on collection.
+	//
+	// This first Collect() primes the collector's per-PID baseline but is NOT
+	// persisted: CPU% is a delta between two samples, so the very first snapshot
+	// always reports 0% (system and per-service). Recording it would leave a
+	// bogus "dip to zero" in the timeline after every (re)start — visible as a
+	// fake spike-down that also masks the real data gap. We serve it as the live
+	// value (it self-corrects within one interval) and let the poller below
+	// record the first sample that has a valid delta.
 	var mu sync.RWMutex
 	latest := collector.Collect()
-	if hist != nil {
-		_ = hist.Append(latest)
-	}
 
 	// ctx is cancelled on SIGINT/SIGTERM, driving graceful shutdown of both the
 	// poller and the HTTP server.

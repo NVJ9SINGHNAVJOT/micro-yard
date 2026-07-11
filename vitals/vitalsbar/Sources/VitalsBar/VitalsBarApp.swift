@@ -78,7 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.isOpaque = false
         panel.hasShadow = true
 
-        let content = PopoverView(store: store)
+        let content = PopoverView(store: store, onDismiss: { [weak self] in self?.closePanel() })
             .background(.regularMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         panel.contentView = NSHostingView(rootView: content)

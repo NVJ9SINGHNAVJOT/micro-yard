@@ -3,6 +3,7 @@ import AppKit
 
 struct PopoverView: View {
     @ObservedObject var store: StatsStore
+    var onDismiss: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -79,6 +80,7 @@ struct PopoverView: View {
         HStack {
             Button("Open full dashboard") {
                 NSWorkspace.shared.open(Vitals.dashboardURL)
+                onDismiss()
             }
             Spacer()
             Button("Quit") { NSApp.terminate(nil) }
