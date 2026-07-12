@@ -255,16 +255,19 @@ const Timeline = {
     if (namesChanged) SvcFilter.render();
 
     // Services: one line per *visible* service, for CPU% and RAM(MB) in parallel.
+    // A sample where the service isn't running contributes no point at all —
+    // emitting 0 would draw a flat zero line, which reads as "running, idle"
+    // rather than "not running". Leaving the hole lets the chart break the line.
     const visible = state.svcNames.filter((n) => !state.svcHidden.has(n));
     const buildSeries = (isCpu) =>
       visible.map((name) => ({
         label: name,
         color: svcColor(name),
-        points: samples.map((s) => {
+        points: samples.reduce((pts, s) => {
           const svc = s.services && s.services[name];
-          const v = svc && svc.running ? (isCpu ? svc.cpu_percent : svc.rss_mb) : 0;
-          return { ts: s.ts, value: v || 0 };
-        }),
+          if (svc && svc.running) pts.push({ ts: s.ts, value: (isCpu ? svc.cpu_percent : svc.rss_mb) || 0 });
+          return pts;
+        }, []),
       }));
     charts.svcCpu.setData(from, to, buildSeries(true));
     charts.svcRam.setData(from, to, buildSeries(false));
