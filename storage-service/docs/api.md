@@ -4,9 +4,9 @@ A personal file storage service. Upload files and retrieve them by ID. Files are
 
 ## Configuration
 
-| Variable | Default | Description                     |
-| -------- | ------- | ------------------------------- |
-| `PORT`   | `8080`  | Port the HTTP server listens on |
+| Variable | Default | Description                    |
+| -------- | ------- | ------------------------------ |
+| `PORT`   | `9000`  | Port the API server listens on |
 
 Base URL: `http://localhost:9000`
 

@@ -35,9 +35,11 @@ The server starts on the port set in `.env` (default `9000`).
 
 Copy `.env.example` to `.env` and set the values:
 
-| Variable | Default | Description                     |
-| -------- | ------- | ------------------------------- |
-| `PORT`   | `8080`  | Port the HTTP server listens on |
+| Variable   | Default                 | Description                            |
+| ---------- | ----------------------- | -------------------------------------- |
+| `PORT`     | `9000`                  | Port the API server listens on         |
+| `WEB_PORT` | `9001`                  | Port the web dashboard listens on      |
+| `API_URL`  | `http://localhost:9000` | API base URL the dashboard proxies to  |
 
 ## Available Tasks
 

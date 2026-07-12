@@ -365,7 +365,7 @@ func listeningPortMap() map[int]int32 {
 			if n, err := strconv.Atoi(line[1:]); err == nil {
 				pid = int32(n)
 			}
-		case 'n': // n<addr>, e.g. n*:4500, n127.0.0.1:8080, n[::1]:8080
+		case 'n': // n<addr>, e.g. n*:4500, n127.0.0.1:9000, n[::1]:9000
 			addr := line[1:]
 			i := strings.LastIndex(addr, ":")
 			if i < 0 {
