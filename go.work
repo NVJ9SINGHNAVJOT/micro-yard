@@ -3,5 +3,5 @@ go 1.25
 use (
 	./go-shared
 	./storage-service
-	./vitals/agent
+	./vitals-service/agent
 )

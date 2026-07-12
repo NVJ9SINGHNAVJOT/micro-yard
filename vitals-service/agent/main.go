@@ -25,17 +25,18 @@ const collectInterval = 2 * time.Second
 // during graceful shutdown.
 const shutdownTimeout = 5 * time.Second
 
+// envPath is the shared .env the agent and the vitalsbar app both read. The tasks
+// always run the agent from agent/, so it sits one level up at vitals-service/.env.
+const envPath = "../.env"
+
 func main() {
-	// Load the shared .env first so its values are visible to the flag defaults
-	// and the VITALS_* overrides below. VITALS_ENV points at the file (default
-	// ../.env, i.e. vitals/.env when run from agent/); a missing file is ignored.
-	envPath := envOr("VITALS_ENV", "../.env")
+	// Load the .env first so VITALS_PORT below sees it. A missing file is ignored.
 	if err := env.LoadEnv(envPath); err != nil {
 		log.Printf("env: %v — continuing without %s", err, envPath)
 	}
 
-	configPath := flag.String("config", envOr("VITALS_CONFIG", "vitals.config.json"), "path to config file")
-	uiDir := flag.String("ui", "", "path to UI dir (default: auto-detect ../ui or ./ui)")
+	configPath := flag.String("config", "vitals.config.json", "path to config file")
+	uiDir := flag.String("ui", "", "path to UI dir (default: ../ui)")
 	flag.Parse()
 
 	cfg, err := loadConfig(*configPath)
@@ -176,14 +177,6 @@ func writeJSON(w http.ResponseWriter, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
-// envOr returns the value of environment variable key, or def when unset/empty.
-func envOr(key, def string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return def
-}
-
 // queryInt reads an int64 query param, falling back to def when absent/invalid.
 func queryInt(r *http.Request, key string, def int64) int64 {
 	v := r.URL.Query().Get(key)
@@ -197,17 +190,18 @@ func queryInt(r *http.Request, key string, def int64) int64 {
 	return n
 }
 
-// resolveUIDir returns the first existing candidate UI directory.
+// resolveUIDir returns the absolute UI directory, or "" to run API-only when it
+// holds no index.html. The tasks always run the agent from agent/ (see Taskfile),
+// so the UI is at ../ui; -ui overrides that for any other working directory.
 func resolveUIDir(override string) string {
-	candidates := []string{override, "../ui", "ui", "./ui"}
-	for _, c := range candidates {
-		if c == "" {
-			continue
-		}
-		if fi, err := os.Stat(filepath.Join(c, "index.html")); err == nil && !fi.IsDir() {
-			abs, _ := filepath.Abs(c)
-			return abs
-		}
+	dir := override
+	if dir == "" {
+		dir = "../ui"
 	}
-	return ""
+	fi, err := os.Stat(filepath.Join(dir, "index.html"))
+	if err != nil || fi.IsDir() {
+		return ""
+	}
+	abs, _ := filepath.Abs(dir)
+	return abs
 }

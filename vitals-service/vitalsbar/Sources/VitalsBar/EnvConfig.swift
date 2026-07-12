@@ -6,20 +6,15 @@ import Foundation
 //
 // Parsing mirrors LoadEnv: skip blank/`#` lines, split on the first `=`, trim.
 enum EnvConfig {
-    // Candidate paths, tried in order. A Finder-launched menu-bar app has no
-    // shell cwd/env, so ~/.config/vitals/.env is the reliable production spot;
-    // the relative paths cover `task bar-start` (cwd = vitalsbar/).
+    // The tasks always run the app from vitalsbar/, so ../.env is vitals-service/.env.
+    // VITALS_ENV overrides it for anything launched from elsewhere (e.g. Finder, which
+    // gives the app no useful cwd); if nothing is found, Vitals.baseURL's default applies.
     private static var candidatePaths: [String] {
         var paths: [String] = []
         if let override = ProcessInfo.processInfo.environment["VITALS_ENV"], !override.isEmpty {
             paths.append(override)
         }
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        paths.append(contentsOf: [
-            "../.env",                              // vitals/.env from vitalsbar/
-            "\(home)/.config/vitals/.env",
-            "../../vitals/.env",
-        ])
+        paths.append("../.env")
         return paths
     }
 

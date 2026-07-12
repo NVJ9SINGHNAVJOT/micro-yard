@@ -8,8 +8,8 @@ includes:
     taskfile: ./storage-service/Taskfile.yml
     dir: ./storage-service
   vitals:
-    taskfile: ./vitals/Taskfile.yml
-    dir: ./vitals
+    taskfile: ./vitals-service/Taskfile.yml
+    dir: ./vitals-service
 
 tasks:
   default:

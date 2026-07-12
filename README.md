@@ -5,10 +5,10 @@ locally, no Docker required.
 
 ## Services
 
-| Service                                | What it is                                                                 | Stack                    | Port(s)      |
-| -------------------------------------- | -------------------------------------------------------------------------- | ------------------------ | ------------ |
-| [storage-service](storage-service/)    | Personal HTTP file storage — upload, retrieve, and serve files, with a web dashboard. | Go (stdlib only)         | 9000 / 9001  |
-| [vitals](vitals/)                       | Local dashboard for CPU/RAM/GPU of your machine and watched services, with a macOS menubar app. | Go + gopsutil, JS UI, Swift | 4500         |
+| Service                             | What it is                                                                                      | Stack                       | Port(s)     |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------- | ----------- |
+| [storage-service](storage-service/) | Personal HTTP file storage — upload, retrieve, and serve files, with a web dashboard.           | Go (stdlib only)            | 9000 / 9001 |
+| [vitals-service](vitals-service/)   | Local dashboard for CPU/RAM/GPU of your machine and watched services, with a macOS menubar app. | Go + gopsutil, JS UI, Swift | 4500        |
 
 Each service is self-contained: its own `go.mod`, its own `Taskfile.yml`, and its
 own `README.md` + `docs/`. Start with a service's README.
@@ -24,7 +24,7 @@ micro-yard/
 │   └── conventions.md     # the layout + docs rules every service follows
 ├── ui-shared/             # shared front-end assets (typography, fonts) for every UI
 ├── storage-service/       # ── service
-└── vitals/                # ── service
+└── vitals-service/        # ── service
 ```
 
 ## Getting started

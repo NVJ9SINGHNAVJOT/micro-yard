@@ -1,4 +1,4 @@
-module github.com/navjot/vitals
+module github.com/navjot/vitals-service
 
 go 1.25
 

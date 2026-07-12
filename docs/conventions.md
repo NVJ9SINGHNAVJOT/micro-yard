@@ -5,7 +5,7 @@ Rules every service in this monorepo follows, so they all read and run the same 
 ## One folder per service
 
 Each service is a self-contained peer directory at the repo root
-(`storage-service/`, `vitals/`, …). A service owns everything it needs:
+(`storage-service/`, `vitals-service/`, …). A service owns everything it needs:
 
 - its own `go.mod` (or `Package.swift`, `package.json`, …) — modules are **not**
   shared or hoisted to the root;
@@ -28,7 +28,7 @@ one concern per file.**
     ├── api.md         # endpoint / interface reference (if it exposes one)
     ├── setup.md       # prerequisites, config, environment, first run
     ├── architecture.md# how it works inside — data flow, design decisions
-    └── *.md           # any other deep dive (e.g. vitals/docs/gpu.md)
+    └── *.md           # any other deep dive (e.g. vitals-service/docs/gpu.md)
 ```
 
 ### README.md
@@ -56,11 +56,15 @@ services: `run`, `build`, `check` (`fmt` + `vet` + `build`), `clean`. The root
 ## Go modules
 
 Multi-module: each Go service has its own `go.mod` and builds from its own folder
-(`cd <service> && go build ./...`, or via its `Taskfile.yml`). There is **no** root
-`go.work` — services don't import each other, and not every service is Go (e.g.
-`vitals/vitalsbar` is Swift), so a Go workspace file would be misleading. Keep module
-paths stable (`github.com/navjot/<name>`) — they're independent of the folder, so a
-service can move without a rename.
+(`cd <service> && go build ./...`, or via its `Taskfile.yml`). The root `go.work`
+lists only the Go modules — the shared `go-shared/` library plus each Go service —
+so they resolve `go-shared` from the working tree instead of a published version.
+Non-Go services stay out of it (e.g. `vitals-service/vitalsbar` is Swift). Add a new
+Go module's folder to `go.work` when you create it, or its build breaks at the root.
+
+Keep module paths stable (`github.com/navjot/<name>`) — they're independent of the
+folder, so a service can move without a rename. The folder still has to be renamed in
+`go.work`, the root `Taskfile.yml`, and the docs.
 
 ## Shared front-end assets
 

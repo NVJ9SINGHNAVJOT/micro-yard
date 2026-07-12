@@ -6,7 +6,7 @@ load. A tiny Go agent reads OS stats from standard macOS tools (`ps`, `lsof`,
 `vm_stat`, `sysctl`) with **no external Go modules**, and serves JSON + a plain
 HTML/JS UI from a single binary.
 
-```
+```text
 watched processes ─▶  Go agent (:4500)  ─▶  /stats   (latest sample)      ─▶  vanilla JS UI
                           └─ system CPU/RAM  ├─ /history (per-date JSONL)  ─▶  timeline charts
                              + GPU via powermetrics
@@ -26,7 +26,7 @@ go mod tidy          # first time only
 go run .             # or: go build -o vitals-agent . && ./vitals-agent
 ```
 
-Then open **http://localhost:4500/**. The agent serves the UI from `../ui`, so
+Then open **<http://localhost:4500/>**. The agent serves the UI from `../ui`, so
 there's one process and no CORS setup.
 
 ```bash
@@ -67,7 +67,7 @@ cd vitalsbar
 swift run VitalsBar          # build + run (or: swift build -c release)
 ```
 
-Or from the vitals folder via Task:
+Or from the `vitals-service/` folder via Task:
 
 ```bash
 task bar-start               # build + run the menubar app
@@ -77,7 +77,7 @@ task bar-build               # just compile the release binary (.build/release/V
 ## Layout
 
 ```text
-vitals/
+vitals-service/
 ├── agent/        # Go agent — samples OS + services, serves /stats, /history, UI
 ├── ui/           # vanilla HTML/CSS/JS dashboard (served by the agent)
 ├── vitalsbar/    # Swift macOS menubar app (reads the same /stats endpoint)

@@ -26,7 +26,7 @@ copy into its own served web tree:
 
 ```bash
 task storage:sync-shared   # → storage-service/web/shared/
-task vitals:sync-shared    # → vitals/ui/shared/
+task vitals:sync-shared    # → vitals-service/ui/shared/
 ```
 
 Those copies are generated (gitignored) and are re-synced automatically by each

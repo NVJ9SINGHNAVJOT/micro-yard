@@ -4,16 +4,16 @@ micro-yard is a monorepo, not a distributed system. The services are independent
 they don't call each other and share no runtime state. What they share is a repo,
 a set of [conventions](conventions.md), and your local machine.
 
-```
+```text
 micro-yard/
-├── storage-service/   HTTP file storage        :9000 (API) + :9001 (dashboard)
-└── vitals/            local system/service monitor  :4500
+├── storage-service/   HTTP file storage             :9000 (API) + :9001 (dashboard)
+└── vitals-service/    local system/service monitor  :4500
 ```
 
 Each service has its own process model and its own docs — see:
 
 - [storage-service/docs/architecture.md](../storage-service/docs/architecture.md)
-- [vitals/docs/architecture.md](../vitals/docs/architecture.md)
+- [vitals-service/docs/architecture.md](../vitals-service/docs/architecture.md)
 
 ## Why a monorepo
 
