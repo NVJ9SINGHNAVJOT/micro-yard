@@ -1,18 +1,18 @@
 import Foundation
 import SwiftUI
 
-// Base URL of the Vitals Go agent. Resolved from the shared .env (VITALS_URL, or
-// built from VITALS_PORT) so it stays in sync with the agent; falls back to the
-// local default. Reused by the "Open full dashboard" button in the popover.
+// Base URL of the Vitals Go agent, built from VITALS_PORT in the shared .env — the
+// same variable the agent binds to, so the two can't drift. The agent always serves
+// on localhost. Reused by the "Open full dashboard" button in the popover.
 enum Vitals {
+    // Matches the agent's default in config.go, used when .env is missing.
+    private static let defaultPort = "4500"
+
     static let baseURL: String = {
-        if let url = EnvConfig.string("VITALS_URL"), !url.isEmpty {
-            return url
+        guard let port = EnvConfig.string("VITALS_PORT"), !port.isEmpty else {
+            return "http://localhost:\(defaultPort)"
         }
-        if let port = EnvConfig.string("VITALS_PORT"), !port.isEmpty {
-            return "http://localhost:\(port)"
-        }
-        return "http://localhost:4500"
+        return "http://localhost:\(port)"
     }()
     static var statsURL: URL { URL(string: baseURL + "/stats")! }
     static var dashboardURL: URL { URL(string: baseURL + "/")! }
