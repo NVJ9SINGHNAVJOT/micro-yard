@@ -10,21 +10,22 @@ import (
 )
 
 // GPUStats is the GPU portion of a snapshot. Available is false when GPU
-// sampling is disabled or powermetrics couldn't be run (e.g. no sudoers entry).
+// sampling is disabled or the accelerator statistics couldn't be read.
 type GPUStats struct {
 	GPUUtilPercent float64 `json:"gpu_util_percent"`
 	Available      bool    `json:"available"`
 }
 
-// gpuSampler runs powermetrics on a slow cadence in the background and caches
-// the last value, since powermetrics is heavy relative to the /stats poll rate.
+// gpuSampler polls the GPU in the background and caches the last value, so a
+// slow /stats request never blocks on the ioreg call.
 type gpuSampler struct {
 	mu   sync.RWMutex
 	last GPUStats
 }
 
-// "GPU HW active residency:  15.20% (...)" or "GPU active residency:  15.20%"
-var gpuResidencyRE = regexp.MustCompile(`(?i)GPU (?:HW )?active residency:\s+([0-9.]+)%`)
+// Device Utilization % is the whole-GPU busy figure Activity Monitor's GPU
+// History plots. IOKit reports it as a whole number.
+var gpuUtilRE = regexp.MustCompile(`"Device Utilization %"=(\d+)`)
 
 func newGPUSampler() *gpuSampler {
 	s := &gpuSampler{last: GPUStats{Available: false}}
@@ -47,7 +48,7 @@ func (s *gpuSampler) set(g GPUStats) {
 // loop samples GPU utilization on the fixed collection interval.
 func (s *gpuSampler) loop() {
 	for {
-		g, err := samplePowermetricsGPU()
+		g, err := sampleIOAccelGPU()
 		if err != nil {
 			s.set(GPUStats{Available: false})
 		} else {
@@ -57,24 +58,31 @@ func (s *gpuSampler) loop() {
 	}
 }
 
-// samplePowermetricsGPU shells out to powermetrics for a single GPU sample.
-// Requires a passwordless sudoers entry for powermetrics (see README).
-func samplePowermetricsGPU() (GPUStats, error) {
+// sampleIOAccelGPU reads the accelerator's utilization counter out of the IOKit
+// registry, which is readable without root.
+func sampleIOAccelGPU() (GPUStats, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "sudo", "-n",
-		"powermetrics", "--samplers", "gpu_power", "-n", "1", "-i", "200")
+	cmd := exec.CommandContext(ctx, "ioreg", "-r", "-d", "1", "-w", "0", "-c", "IOAccelerator")
 	out, err := cmd.Output()
 	if err != nil {
 		return GPUStats{Available: false}, err
 	}
-	m := gpuResidencyRE.FindSubmatch(out)
-	if m == nil {
+	ms := gpuUtilRE.FindAllSubmatch(out, -1)
+	if ms == nil {
 		return GPUStats{Available: false}, nil
 	}
-	v, err := strconv.ParseFloat(string(m[1]), 64)
-	if err != nil {
-		return GPUStats{Available: false}, err
+	// A machine can expose more than one accelerator (integrated + discrete on
+	// Intel Macs); report the busiest rather than summing past 100%.
+	busiest := 0
+	for _, m := range ms {
+		v, err := strconv.Atoi(string(m[1]))
+		if err != nil {
+			return GPUStats{Available: false}, err
+		}
+		if v > busiest {
+			busiest = v
+		}
 	}
-	return GPUStats{GPUUtilPercent: round1(v), Available: true}, nil
+	return GPUStats{GPUUtilPercent: float64(busiest), Available: true}, nil
 }

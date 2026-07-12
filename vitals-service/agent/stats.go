@@ -19,13 +19,18 @@ type SystemStats struct {
 	MemPercent      float64 `json:"mem_percent"`
 }
 
-// ServiceStats is one watched service's snapshot. When the process isn't
-// running, only Running is meaningful.
+// ServiceStats is one watched service's snapshot, totalled over the matched
+// process and every descendant of it (see services). When nothing is running,
+// only Running is meaningful.
 type ServiceStats struct {
-	PID        int32   `json:"pid,omitempty"`
+	PID        int32   `json:"pid,omitempty"`   // root of the tree; descendants are folded into the totals
+	Procs      int     `json:"procs,omitempty"` // processes counted, including the root
 	CPUPercent float64 `json:"cpu_percent"`
-	RSSMB      float64 `json:"rss_mb"`
-	Running    bool    `json:"running"`
+	MemMB      float64 `json:"mem_mb"`
+	// RSSMB carries the same value as MemMB under the field's former name, so
+	// history written before the rename still charts. Prefer MemMB.
+	RSSMB   float64 `json:"rss_mb"`
+	Running bool    `json:"running"`
 }
 
 // Snapshot is the full /stats payload.
@@ -40,14 +45,15 @@ type Snapshot struct {
 // a single, cheap exec.
 type procInfo struct {
 	pid        int32
-	rssKB      int64
+	ppid       int32
+	rssKB      int64   // only a fallback for memory; footprints() is the real source
 	cpuSeconds float64 // cumulative CPU time consumed since the process started
 	command    string  // full command line (executable path + args)
 }
 
 // Collector holds state needed to compute instantaneous deltas between polls.
 // Stats are read by shelling out to standard macOS tools (ps, lsof, vm_stat,
-// sysctl) so the agent depends on no external Go modules.
+// sysctl, footprint) so the agent depends on no external Go modules.
 type Collector struct {
 	cfg        Config
 	mu         sync.Mutex
@@ -71,7 +77,8 @@ func NewCollector(cfg Config) *Collector {
 
 // Collect gathers one full snapshot. Every process is read once via `ps -A`;
 // that single dataset feeds both the machine-wide CPU total and per-service
-// stats, so a poll costs ~2 short-lived subprocesses (ps + lsof) plus vm_stat.
+// stats, so a poll costs ~3 short-lived subprocesses (ps + lsof + one footprint
+// covering every watched service) plus vm_stat.
 func (c *Collector) Collect() Snapshot {
 	now := time.Now()
 	procs := readProcs()
@@ -135,39 +142,100 @@ func (c *Collector) system(cur, prev map[int32]float64, wall float64) SystemStat
 	return s
 }
 
-// services resolves each watched spec to a live PID and reads its stats from
-// the already-collected process list.
+// services resolves each watched spec to a live PID and totals that process
+// together with all of its descendants.
+//
+// Walking the tree is what keeps the numbers honest for supervisor-style
+// services, where the process that owns the port is a thin parent that forks
+// workers to do the real work: charting only the parent reports its overhead
+// rather than the service's actual usage. Memory comes from footprints() rather
+// than ps, for the reasons given there.
 func (c *Collector) services(procs []procInfo, ports map[int]int32, prev map[int32]float64, wall float64) map[string]ServiceStats {
 	byPID := make(map[int32]procInfo, len(procs))
+	children := make(map[int32][]int32, len(procs))
 	for _, p := range procs {
 		byPID[p.pid] = p
+		children[p.ppid] = append(children[p.ppid], p.pid)
 	}
+
+	// Resolve every spec to its tree first, so one footprint exec covers them all.
+	trees := make(map[string][]int32, len(c.cfg.Services))
+	var all []int32
+	for _, spec := range c.cfg.Services {
+		root := resolvePID(spec, procs, ports)
+		if _, ok := byPID[root]; root == 0 || !ok {
+			continue
+		}
+		t := tree(root, children)
+		trees[spec.Name] = t
+		all = append(all, t...)
+	}
+	mem := footprints(all)
 
 	out := map[string]ServiceStats{}
 	for _, spec := range c.cfg.Services {
-		pid := resolvePID(spec, procs, ports)
-		p, ok := byPID[pid]
-		if pid == 0 || !ok {
+		t, ok := trees[spec.Name]
+		if !ok {
 			out[spec.Name] = ServiceStats{Running: false}
 			continue
 		}
-		st := ServiceStats{PID: pid, Running: true}
-		st.RSSMB = round1(float64(p.rssKB) / 1024)
+
+		st := ServiceStats{PID: t[0], Procs: len(t), Running: true}
+		var memBytes uint64
+		var cpuDelta float64
+		for _, pid := range t {
+			if fp, ok := mem[pid]; ok {
+				memBytes += fp
+			} else {
+				// footprint couldn't see this pid (it exited, or footprint isn't
+				// available at all). RSS undercounts, but it beats reporting zero.
+				memBytes += uint64(byPID[pid].rssKB) * 1024
+			}
+			// A process that started since the last poll has no baseline to
+			// subtract, so it contributes no CPU until the next one.
+			if pcs, ok := prev[pid]; ok && byPID[pid].cpuSeconds >= pcs {
+				cpuDelta += byPID[pid].cpuSeconds - pcs
+			}
+		}
+
+		st.MemMB = round1(float64(memBytes) / 1024 / 1024)
+		st.RSSMB = st.MemMB
 		// Instantaneous CPU% as a fraction of a single core (top-style; may
-		// exceed 100 when a process runs on several cores at once), from the
+		// exceed 100 when the tree runs on several cores at once), from the
 		// delta since the previous poll.
 		if wall > 0 {
-			if pcs, ok := prev[pid]; ok && p.cpuSeconds >= pcs {
-				st.CPUPercent = round1((p.cpuSeconds - pcs) / wall * 100)
-			}
+			st.CPUPercent = round1(cpuDelta / wall * 100)
 		}
 		out[spec.Name] = st
 	}
 	return out
 }
 
-// resolvePID picks a PID for spec: listening-port match first, then a substring
-// of the full command line.
+// tree returns root and all of its descendants, breadth-first. The visited set
+// guards against a cycle in a torn `ps` snapshot (a recycled pid appearing as
+// its own ancestor), which would otherwise loop forever.
+func tree(root int32, children map[int32][]int32) []int32 {
+	visited := map[int32]bool{root: true}
+	out := []int32{root}
+	for i := 0; i < len(out); i++ {
+		for _, kid := range children[out[i]] {
+			if !visited[kid] {
+				visited[kid] = true
+				out = append(out, kid)
+			}
+		}
+	}
+	return out
+}
+
+// resolvePID picks the root PID for spec: listening-port match first, then a
+// substring of the full command line.
+//
+// Among command-line matches it takes the topmost one — a process none of whose
+// ancestors also match — because a service's workers usually carry the same
+// string as the parent that spawned them (`foo serve` forking `foo worker`).
+// Anchoring on a worker would silently exclude its parent and siblings from the
+// tree. Ties break on the lowest pid, so the choice is stable across polls.
 func resolvePID(spec ServiceSpec, procs []procInfo, ports map[int]int32) int32 {
 	if spec.Port != 0 {
 		if pid, ok := ports[spec.Port]; ok {
@@ -177,19 +245,45 @@ func resolvePID(spec ServiceSpec, procs []procInfo, ports map[int]int32) int32 {
 	if spec.Match == "" {
 		return 0
 	}
+
 	needle := strings.ToLower(spec.Match)
+	matched := map[int32]bool{}
+	byPID := make(map[int32]procInfo, len(procs))
 	for _, p := range procs {
+		byPID[p.pid] = p
 		if strings.Contains(strings.ToLower(p.command), needle) {
-			return p.pid
+			matched[p.pid] = true
 		}
 	}
-	return 0
+
+	var best int32
+	for pid := range matched {
+		// Skip pids that descend from another match; that ancestor's tree already
+		// covers them. seen bounds the walk if ps hands us a parent cycle; an
+		// unknown ancestor has a zero ppid, which ends it.
+		descends := false
+		seen := map[int32]bool{pid: true}
+		for a := byPID[pid].ppid; a != 0 && !seen[a]; a = byPID[a].ppid {
+			seen[a] = true
+			if matched[a] {
+				descends = true
+				break
+			}
+		}
+		if descends {
+			continue
+		}
+		if best == 0 || pid < best {
+			best = pid
+		}
+	}
+	return best
 }
 
 // readProcs lists every process once via `ps -A`. Output columns are
-// pid, rss (KB), cumulative CPU time, and the full command line.
+// pid, ppid, rss (KB), cumulative CPU time, and the full command line.
 func readProcs() []procInfo {
-	out, err := exec.Command("ps", "-A", "-o", "pid=,rss=,time=,command=").Output()
+	out, err := exec.Command("ps", "-A", "-o", "pid=,ppid=,rss=,time=,command=").Output()
 	if err != nil {
 		return nil
 	}
@@ -199,22 +293,24 @@ func readProcs() []procInfo {
 	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for sc.Scan() {
 		fields := strings.Fields(sc.Text())
-		if len(fields) < 3 {
+		if len(fields) < 4 {
 			continue
 		}
 		pid, err := strconv.Atoi(fields[0])
 		if err != nil {
 			continue
 		}
-		rss, _ := strconv.ParseInt(fields[1], 10, 64)
+		ppid, _ := strconv.Atoi(fields[1])
+		rss, _ := strconv.ParseInt(fields[2], 10, 64)
 		command := ""
-		if len(fields) > 3 {
-			command = strings.Join(fields[3:], " ")
+		if len(fields) > 4 {
+			command = strings.Join(fields[4:], " ")
 		}
 		procs = append(procs, procInfo{
 			pid:        int32(pid),
+			ppid:       int32(ppid),
 			rssKB:      rss,
-			cpuSeconds: parsePsTime(fields[2]),
+			cpuSeconds: parsePsTime(fields[3]),
 			command:    command,
 		})
 	}

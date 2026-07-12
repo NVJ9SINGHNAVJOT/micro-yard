@@ -3,11 +3,11 @@
 ```
 watched processes ─▶  Go agent (:4500)  ─▶  /stats   (latest sample)      ─▶  vanilla JS UI
                           └─ system CPU/RAM  ├─ /history (per-date JSONL)  ─▶  timeline charts
-                             + GPU via powermetrics
+                             + GPU via IOKit
 ```
 
 One process. The agent (`agent/`, pure-stdlib Go — it shells out to `ps`, `lsof`,
-`vm_stat`, and `sysctl`, so there are **no external modules**) samples the OS on a
+`vm_stat`, `sysctl`, and `ioreg`, so there are **no external modules**) samples the OS on a
 **fixed 2-second cadence** in the background, serves the latest
 sample from `/stats`, and serves the `ui/` app from `/` — so there's a single
 binary and no CORS setup. A separate Swift menubar app (`vitalsbar/`) can read the
@@ -45,4 +45,4 @@ in-flight HTTP requests finish, and flushes + closes the history file.
 - CPU% is instantaneous and top-style (fraction of a single core; a busy
   process spread across several cores can exceed 100%).
 - The live snapshot is in-memory; history is persisted to per-date JSONL files.
-- Stats collection needs no privileges except the optional GPU path — see [gpu.md](gpu.md).
+- Stats collection needs no privileges at all, GPU included — see [gpu.md](gpu.md).

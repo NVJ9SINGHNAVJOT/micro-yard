@@ -1,47 +1,27 @@
-# Vitals — GPU Setup
+# Vitals — GPU
 
-Vitals reads GPU utilization via macOS `powermetrics`, which requires root.
-To let the agent sample it **without a password prompt on every read**, add a
-sudoers entry scoped to *only* that one binary. No password is stored anywhere.
-
-> Scope: this grants passwordless run of `/usr/bin/powermetrics` and nothing
-> else — it is not a general root grant. Local dev machines only.
-
-## Setup
-
-Run these two commands once (you'll be asked for your login password by `sudo`):
+The GPU gauge works out of the box: no setup step, no password prompt, no
+privileges. The agent shells out to `ioreg` and reads the accelerator's
+utilization counter straight out of the IOKit registry:
 
 ```bash
-echo "$(whoami) ALL=(root) NOPASSWD: /usr/bin/powermetrics" | sudo tee /etc/sudoers.d/vitals
-sudo chmod 440 /etc/sudoers.d/vitals
+ioreg -r -d 1 -w 0 -c IOAccelerator | grep -o '"Device Utilization %"=[0-9]*'
 ```
 
-Verify it works (should print power stats with no password prompt):
+`Device Utilization %` is the fraction of the GPU's capacity in use, reported as
+a whole number. It is the same figure Activity Monitor plots in
+**Window → GPU History**, so the dashboard, the menu bar and Activity Monitor
+all agree.
 
-```bash
-sudo -n powermetrics --samplers gpu_power -n 1 -i 200 | grep -i "GPU.*residency"
-```
+A Mac can expose more than one accelerator (integrated + discrete, on Intel).
+The agent reports the busiest of them rather than summing, which would let the
+gauge run past 100%. If no accelerator is found the gauge shows **n/a** instead
+of a misleading zero.
 
-Then start the agent and the GPU gauge goes live within ~2s:
+Sampling runs on the same fixed interval as the rest of the collector, in the
+background, so a `/stats` request never waits on it.
 
-```bash
-cd agent && go run .
-# open http://localhost:4500/  — run an ollama model and watch the GPU gauge move
-```
+## Disabling
 
-## Remove
-
-Delete the sudoers file to revoke it completely:
-
-```bash
-sudo rm /etc/sudoers.d/vitals
-```
-
-After removal the dashboard still works — the GPU gauge just shows **n/a**.
-(You can also set `"gpu": false` in `agent/vitals.config.json` to skip GPU
-sampling entirely without touching sudoers.)
-
-## Notes
-
-- The path must be `/usr/bin/powermetrics` (confirm with `which powermetrics`).
-- `chmod 440` is required — sudo ignores sudoers files with looser permissions.
+Set `"gpu": false` in `agent/vitals.config.json` to skip GPU sampling entirely.
+The gauge then shows **n/a** and everything else works as normal.

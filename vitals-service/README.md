@@ -9,7 +9,7 @@ HTML/JS UI from a single binary.
 ```text
 watched processes ─▶  Go agent (:4500)  ─▶  /stats   (latest sample)      ─▶  vanilla JS UI
                           └─ system CPU/RAM  ├─ /history (per-date JSONL)  ─▶  timeline charts
-                             + GPU via powermetrics
+                             + GPU via IOKit
 ```
 
 The UI has two parts: **live gauges + service cards** (polling `/stats`) and a
@@ -84,11 +84,11 @@ vitals-service/
 └── docs/
     ├── api.md          # /stats + /history reference
     ├── architecture.md # how sampling, matching, and history work
-    └── gpu.md          # macOS GPU (powermetrics/sudoers) setup
+    └── gpu.md          # how the macOS GPU gauge is measured
 ```
 
 ## Docs
 
 - [docs/api.md](docs/api.md) — the `/stats` and `/history` endpoints.
 - [docs/architecture.md](docs/architecture.md) — sampling cadence, service matching, history storage.
-- [docs/gpu.md](docs/gpu.md) — enabling the GPU gauge on macOS (needs a scoped sudoers entry). Without it everything else still works and the GPU gauge shows **n/a**.
+- [docs/gpu.md](docs/gpu.md) — how the GPU gauge is measured (no setup or sudo needed; it matches Activity Monitor's GPU History).

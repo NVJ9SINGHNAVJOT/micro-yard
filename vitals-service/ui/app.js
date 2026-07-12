@@ -134,6 +134,13 @@ function metricRow(label, value) {
   return `<div class="metric-row"><span>${label}</span><span class="val">${value}</span></div>`;
 }
 
+// svcMem reads a service's memory in MB. History recorded before the agent
+// started reporting mem_mb only carries the older rss_mb, so fall back to it —
+// without this, those samples would chart as zero.
+function svcMem(svc) {
+  return svc.mem_mb ?? svc.rss_mb ?? 0;
+}
+
 // svcColor keeps a service's color stable regardless of who's visible.
 function svcColor(name) {
   const i = state.svcNames.indexOf(name);
@@ -176,7 +183,7 @@ const Gauges = {
           <div class="service-head"><span class="service-name">${name}</span>
           <span class="badge up">pid ${svc.pid}</span></div>
           ${metricRow("CPU", svc.cpu_percent.toFixed(1) + "%")}
-          ${metricRow("RAM", svc.rss_mb.toFixed(1) + " MB")}</div>`;
+          ${metricRow("RAM", svcMem(svc).toFixed(1) + " MB")}</div>`;
       })
       .join("");
   },
@@ -265,7 +272,7 @@ const Timeline = {
         color: svcColor(name),
         points: samples.reduce((pts, s) => {
           const svc = s.services && s.services[name];
-          if (svc && svc.running) pts.push({ ts: s.ts, value: (isCpu ? svc.cpu_percent : svc.rss_mb) || 0 });
+          if (svc && svc.running) pts.push({ ts: s.ts, value: (isCpu ? svc.cpu_percent : svcMem(svc)) || 0 });
           return pts;
         }, []),
       }));
