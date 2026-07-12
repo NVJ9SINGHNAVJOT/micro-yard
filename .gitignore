@@ -5,12 +5,12 @@ bin/
 
 # Generated copies of ui-shared/ (single source of truth is ui-shared/; run task sync-shared)
 storage-service/web/shared/
-vitals/ui/shared/
+vitals-service/ui/shared/
 
 # storage-service
 storage-service/storage/
 
-# vitals
-vitals/agent/history/
-vitals/vitalsbar/.build
-vitals/agent/vitals.config.json
+# vitals-service
+vitals-service/agent/history/
+vitals-service/vitalsbar/.build
+vitals-service/agent/vitals.config.json
