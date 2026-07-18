@@ -129,12 +129,13 @@ func (c *Collector) system(cur, prev map[int32]float64, wall float64) SystemStat
 		s.CPUTotalPercent = round1(delta / wall / float64(runtime.NumCPU()) * 100)
 	}
 
-	// Memory: "available" is free + inactive (matching the previous behavior);
-	// used is everything else.
-	if avail, ok := readMemAvailableBytes(); ok && c.memTotalMB > 0 {
-		usedMB := c.memTotalMB - avail/1024/1024
-		if usedMB < 0 {
-			usedMB = 0
+	// Memory: report used the way Activity Monitor's "Memory Used" does —
+	// App Memory + Wired + Compressed — rather than "everything but free".
+	// See readMemUsedBytes for the derivation.
+	if used, ok := readMemUsedBytes(); ok && c.memTotalMB > 0 {
+		usedMB := used / 1024 / 1024
+		if usedMB > c.memTotalMB {
+			usedMB = c.memTotalMB
 		}
 		s.MemUsedMB = round1(usedMB)
 		s.MemPercent = round1(usedMB / c.memTotalMB * 100)
@@ -393,15 +394,24 @@ func readMemTotalBytes() float64 {
 	return v
 }
 
-// readMemAvailableBytes returns available memory (free + inactive pages) in
-// bytes, parsed from vm_stat.
-func readMemAvailableBytes() (float64, bool) {
+// readMemUsedBytes returns used memory in bytes the way Activity Monitor's
+// "Memory Used" reports it: App Memory + Wired + Compressed, where
+//
+//	App Memory ≈ Anonymous pages − Purgeable pages
+//	Wired      = Pages wired down
+//	Compressed = Pages occupied by compressor
+//
+// This deliberately does NOT count file-backed cache (Cached Files) or free
+// pages as used, and unlike "total − free − inactive" it does not treat
+// inactive anonymous pages as free — those cost a compression/swap to reclaim,
+// which macOS counts as used. Values are parsed from vm_stat.
+func readMemUsedBytes() (float64, bool) {
 	out, err := exec.Command("vm_stat").Output()
 	if err != nil {
 		return 0, false
 	}
 	pageSize := 4096.0 // sane default; overridden by the header below
-	var free, inactive float64
+	var anonymous, purgeable, wired, compressed float64
 	sc := bufio.NewScanner(bytes.NewReader(out))
 	for sc.Scan() {
 		line := sc.Text()
@@ -426,13 +436,21 @@ func readMemAvailableBytes() (float64, bool) {
 			continue
 		}
 		switch strings.TrimSpace(key) {
-		case "Pages free":
-			free = pages
-		case "Pages inactive":
-			inactive = pages
+		case "Anonymous pages":
+			anonymous = pages
+		case "Pages purgeable":
+			purgeable = pages
+		case "Pages wired down":
+			wired = pages
+		case "Pages occupied by compressor":
+			compressed = pages
 		}
 	}
-	return (free + inactive) * pageSize, true
+	app := anonymous - purgeable // App Memory: anonymous, non-purgeable
+	if app < 0 {
+		app = 0
+	}
+	return (app + wired + compressed) * pageSize, true
 }
 
 func round1(v float64) float64 {
